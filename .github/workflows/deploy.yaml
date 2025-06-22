@@ -1,5 +1,18 @@
 name: Deploy
-on: [push, workflow_dispatch]
+# on: [push, workflow_dispatch]
+on:
+    push:
+        branches:
+            - main
+        paths:                 # you can specify which file change will trigger the workflow
+            - "src/**"
+            - "package.json"
+            - "package-lock.json"
+            - "index.html"
+            - "main.html"
+        # paths-ignore:         # you can specify which file change will NOT trigger the workflow
+        #     - "README.md"
+        #     - ".github/workflows/**"
 
 jobs:
     test:
@@ -25,3 +38,41 @@ jobs:
             
             - name: "Run Tests"
               run: npm run test
+    
+    build:
+        runs-on: ubuntu-latest
+        needs: test
+        steps:
+            - name: "Clone Repo"
+              uses: actions/checkout@v4
+            
+            - name: "Install Node.js"
+              uses: actions/setup-node@v4
+              with:
+                node-version: 20
+            
+            - name: "Print Node.js Version"
+              run: node -v
+            
+            - name: "Install Dependencies"
+              run: npm ci
+            
+            - name: "Build Project"
+              run: npm run build
+            
+            - name: "Uploading Build Artifacts"
+              uses: actions/upload-artifact@v4
+              with:
+                name: dist-files
+                path: dist
+    deploy:
+        runs-on: ubuntu-latest
+        needs: build
+        steps:
+            - name: "Download Build Artifacts"
+              uses: actions/download-artifact@v4
+              with:
+                name: dist-files
+                path: dist
+            - name: "Deploy to Server"
+              run: echo "Deploying to server..."
